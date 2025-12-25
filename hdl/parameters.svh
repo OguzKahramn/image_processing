@@ -1,0 +1,10 @@
+`ifndef __PARAMETERS_SVH__
+`define __PARAMETERS_SVH__
+
+`define IMG_HEIGHT 410
+`define IMG_WIDTH 670
+
+`define AXIS_TDATA_WIDTH 8
+`define AXIS_TUSER_WIDTH 1
+
+`endif
