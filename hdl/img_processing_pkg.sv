@@ -12,6 +12,12 @@ parameter int AXIS_TUSER_WIDTH = 1; //`AXIS_TUSER_WIDTH;
 
 typedef logic[7:0] line_buffer_t[IMG_W-1:0];
 
+typedef enum logic [1:0] {
+  KERNEL_BYPASS,
+  KERNEL_BOX,
+  KERNEL_GAUSS,
+  KERNEL_SOBEL
+} kernel_type_t;
 
 endpackage
 

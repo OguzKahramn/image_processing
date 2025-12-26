@@ -9,6 +9,7 @@ module img_processor #(
 )(
   input  wire  clk,
   input  wire  reset_n,
+  input  wire kernel_type_t kernel_type,
 
   axi_stream_if.slave s_axis,
   axi_stream_if.master m_axis
@@ -26,7 +27,7 @@ logic [$clog2(NUM_LINE_BUFFS)-1:0] wr_cntr;
 logic [$clog2(IMG_W)-1:0] rd_pixel;
 int i,j;
 
-logic [15:0] conv_sum;
+logic signed [15:0] conv_sum;
 logic [7:0] pixel_out;
 logic window_valid;
 logic [PIPELINE_STAGE-1:0] valid_pipe;
@@ -101,15 +102,41 @@ always_ff @(posedge clk)begin
   end
   else begin
     if(window_valid)begin
-      conv_sum <= line_buffer[row0][rd_pixel-1]+
-                  line_buffer[row0][rd_pixel  ]+
-                  line_buffer[row0][rd_pixel+1]+
-                  line_buffer[row1][rd_pixel-1]+
-                  line_buffer[row1][rd_pixel  ]+
-                  line_buffer[row1][rd_pixel+1]+
-                  line_buffer[row2][rd_pixel-1]+
-                  line_buffer[row2][rd_pixel  ]+
-                  line_buffer[row2][rd_pixel+1];
+      case(kernel_type)
+      KERNEL_BYPASS: begin
+        conv_sum <= line_buffer[row0][rd_pixel];
+      end
+      KERNEL_BOX: begin
+        conv_sum <= line_buffer[row0][rd_pixel-1]+
+                    line_buffer[row0][rd_pixel  ]+
+                    line_buffer[row0][rd_pixel+1]+
+                    line_buffer[row1][rd_pixel-1]+
+                    line_buffer[row1][rd_pixel  ]+
+                    line_buffer[row1][rd_pixel+1]+
+                    line_buffer[row2][rd_pixel-1]+
+                    line_buffer[row2][rd_pixel  ]+
+                    line_buffer[row2][rd_pixel+1];
+      end
+      KERNEL_GAUSS:begin
+        conv_sum <= line_buffer[row0][rd_pixel-1]+
+                    (line_buffer[row0][rd_pixel  ]<<1)+
+                    line_buffer[row0][rd_pixel+1]+
+                    (line_buffer[row1][rd_pixel-1]<<1)+
+                    (line_buffer[row1][rd_pixel  ]<<2)+
+                    (line_buffer[row1][rd_pixel+1]<<1)+
+                    line_buffer[row2][rd_pixel-1]+
+                    (line_buffer[row2][rd_pixel  ]<<1)+
+                    line_buffer[row2][rd_pixel+1];
+      end
+      KERNEL_SOBEL: begin
+        conv_sum <= (line_buffer[row0][rd_pixel+1] - line_buffer[row0][rd_pixel-1]) +
+                    ((line_buffer[row1][rd_pixel+1] - line_buffer[row1][rd_pixel-1]) <<< 1) +
+                    (line_buffer[row2][rd_pixel+1] - line_buffer[row2][rd_pixel-1]);
+      end
+      default: begin
+        conv_sum <= line_buffer[row0][rd_pixel];
+      end
+      endcase
     end
   end
 end
@@ -119,7 +146,19 @@ always_ff @(posedge clk)begin
     pixel_out <= 'd0;
   end
   else begin
-    pixel_out <= conv_sum / 9;
+    case(kernel_type)
+      KERNEL_BOX:begin
+        pixel_out <= conv_sum * 28 >> 8;
+      end
+      KERNEL_GAUSS:begin
+        pixel_out <= conv_sum >> 4;
+      end
+      KERNEL_SOBEL:begin
+        //pixel_out <= (conv_sum < 0) ? -conv_sum : conv_sum;
+        pixel_out = (conv_sum < 0) ? 0 : (conv_sum > 255) ? 255 : conv_sum;
+      end
+      default: pixel_out <= conv_sum[7:0];
+    endcase
   end
 end
 

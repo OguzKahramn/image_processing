@@ -26,6 +26,7 @@ module tb_img_processor();
   //! Clock generation: 8ns period (125MHz)
   always #(T/2) clk = ~ clk;
 
+  kernel_type_t kernel_type;
   //! AXI-Stream slave interface for input packets
   axi_stream_if #(.TDATA_WIDTH_P(TDATA_WIDTH), .TUSER_WIDTH_P(TUSER_WIDTH)) s_axis();
   //! AXI-Stream master interface for output packets
@@ -53,6 +54,7 @@ module tb_img_processor();
   ) DUT(
   .clk(clk),
   .reset_n(resetn),
+  .kernel_type(kernel_type),
 
   .s_axis(s_axis),
   .m_axis(m_axis)
@@ -104,6 +106,7 @@ always_ff @(posedge clk) begin : read_text_file
   else begin
     if(counter < 'd4)begin
       counter <= counter + 'd1;
+      kernel_type <= KERNEL_SOBEL;
     end
     else if(counter == 'd4)begin
       counter <= counter + 'd1;
