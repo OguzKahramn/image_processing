@@ -42,14 +42,33 @@ class imageProcessing:
     for i in range(1, self.height-2):
         for j in range(1, self.width-2):
             if idx >= len(data):
-                print("⚠ Ran out of FPGA data at idx =", idx)
+                print("Ran out of FPGA data at idx =", idx)
                 return
             self.processedFpgaImg[i][j] = min(max(data[idx], 0), 255)
             idx += 1
 
 
-kernelGaus = np.ones((3,3),np.int32)/9
-img = imageProcessing("gemi-anadolu.jpg",kernelGaus)
+def get_kernel(name):
+  if name == "box":
+      return np.ones((3,3),np.int32)/9
+  elif name == "gauss":
+     return np.array([
+        [1, 2, 1],
+        [2, 4, 2],
+        [1, 2, 1]
+     ], dtype=np.int32) / 16
+  elif name == "sobel_x":
+     return np.array([
+        [-1, 0, 1],
+        [-2, 0, 2],
+        [-1, 0, 1]
+     ], dtype=np.int8)
+  else:
+     raise ValueError(f"Unknown kernel {name}")
+
+
+kernel = get_kernel("sobel_x")
+img = imageProcessing("gemi-anadolu.jpg",kernel)
 img.showImg(img.image, "original")
 img.gaussImg()
 img.showImg(img.processedImg, "Processed")
@@ -59,7 +78,6 @@ img.convertImgtoTxt(img.image,"pixels_in.txt")
 img.convertImgtoTxt(img.processedImg,"pixels_out.txt")
 img.convertText2Img("pixel_out_fpga.txt")
 img.showImg(img.processedFpgaImg,"FPGA Output")
-
 
 
 

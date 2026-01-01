@@ -154,7 +154,6 @@ always_ff @(posedge clk)begin
         pixel_out <= conv_sum >> 4;
       end
       KERNEL_SOBEL:begin
-        //pixel_out <= (conv_sum < 0) ? -conv_sum : conv_sum;
         pixel_out = (conv_sum < 0) ? 0 : (conv_sum > 255) ? 255 : conv_sum;
       end
       default: pixel_out <= conv_sum[7:0];
