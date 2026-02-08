@@ -17,11 +17,15 @@ GOLDEN_DIR := test_vectors/golden
 
 PIXELS_FILE ?= test_vectors/input/pixels_in.txt
 IMAGE_FILE ?= test_vectors/images/gemi-anadolu.jpg
+RANDOM_IMAGE_FILE ?= test_vectors/images/random_image.jpg
 OUTPUT_FILE ?= test_vectors/fpga_out/pixel_out_fpga.txt
 GOLDEN_FILE ?= $(GOLDEN_DIR)/ref.txt
+REQUIREMENTS_FILE ?= sw/requirements.txt
 
 COMPILE_ARGS += --prefix $(SIM_NAME) -o $(SIM_NAME)
 COMPILE_ARGS += +incdir+hdl
+
+GEN_PARAM_IMAGE ?= $(IMAGE_FILE)
 
 EXTRA_ARGS += \
 	--sv \
@@ -58,16 +62,19 @@ WARNING_ARGS += \
 	-Wno-SELRANGE \
 	-Wno-MULTIDRIVEN
 
-.PHONY: gen-txt gen-param all build run clean sim compare
+.PHONY: gen-txt gen-param all build run clean sim compare download_random_img random_test install
 
 all: sim
 
+install:
+	pip3 install -r $(REQUIREMENTS_FILE)
+
 gen-param:
-	python3 sw/cli.py gen-params -i $(IMAGE_FILE) -f $(HDL_PARAM)
+	python3 sw/cli.py gen-params -i $(GEN_PARAM_IMAGE) -f $(HDL_PARAM)
 
 gen-txt: gen-param
-	python3 sw/cli.py gen-txt -i $(IMAGE_FILE) -o $(PIXELS_FILE)
-	
+	python3 sw/cli.py gen-txt -i $(GEN_PARAM_IMAGE) -o $(PIXELS_FILE)
+
 build: gen-txt
 	$(VERILATOR) --cc --exe --main --timing \
 		-Mdir $(SIM_DIR) \
@@ -81,15 +88,23 @@ run: build
 	$(MAKE) -j$(NPROC) -C $(SIM_DIR) -f $(SIM_NAME).mk
 	./$(SIM_DIR)/$(SIM_NAME)
 
-sim: $(PIXELS_FILE)
+sim: gen-txt
+	$(MAKE) gen-txt
 	$(MAKE) run
 	$(MAKE) compare
 
 compare : $(PIXELS_FILE)
-	python3 sw/cli.py compare -i $(IMAGE_FILE) \
+	python3 sw/cli.py compare -i $(GEN_PARAM_IMAGE) \
 	                          -f $(OUTPUT_FILE) \
 	                          -k $(KERNEL) \
 	                          -o $(GOLDEN_FILE)
+
+download_random_img:
+	python3 sw/cli.py download-image
+
+random_test:
+	$(MAKE) download_random_img
+	$(MAKE) GEN_PARAM_IMAGE=$(RANDOM_IMAGE_FILE) sim
 
 clean:
 	rm -rf $(SIM_DIR)

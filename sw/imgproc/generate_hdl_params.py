@@ -2,6 +2,22 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 
+"""
+  Generates a SystemVerilog header file containing image and AXI-Stream parameters.
+    
+  This function creates a `.svh` file with `include` guards. If the file already exists,
+  a backup is created before overwriting to prevent accidental data loss.
+
+  Args:
+    fileName (str): Path and name of the .svh file to generate.
+    img_height (int): The height of the image in pixels.
+    img_width (int): The width of the image in pixels.
+    axis_tdata_width (int, optional): Bit width of the AXI-Stream TDATA signal. Defaults to 8.
+    axis_tuser_width (int, optional): Bit width of the AXI-Stream TUSER signal. Defaults to 1.
+
+  Returns:
+    None
+"""
 def generate_hdl_params(fileName: str,
                         img_height: int,
                         img_width: int,

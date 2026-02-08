@@ -4,7 +4,17 @@ from imgproc.image_processing_model import ImageProcessingModel
 from imgproc.io import image_to_txt, txt_to_image
 from imgproc.processing_helper import apply_filter, diff, valid_region
 from imgproc.generate_hdl_params import generate_hdl_params
+from imgproc.io_web import download_random_image
 
+"""
+  Command Line Interface for the Image Processing HDL Verification Suite.
+
+  Available Commands:
+    - gen-txt: Converts a standard image (JPG/PNG) to a flat pixel text file for TBs.
+    - download-image: Fetches a random image for regression testing.
+    - gen-params: Automatically updates SystemVerilog headers with image dimensions.
+    - compare: Runs the Golden Model and compares it against FPGA simulation results.
+"""
 def main():
   parser = argparse.ArgumentParser(
     description="Image processing reference model for FPGA verification"
@@ -19,6 +29,8 @@ def main():
   gen.add_argument("-o","--out",
                    required=True,
                    help="Pixels text file path for FGPA input")
+  
+  download_image = sub.add_parser("download-image")
 
   params = sub.add_parser("gen-params",
                           help="Generates SystemVerilog parameters.svh from image")
@@ -52,6 +64,9 @@ def main():
     model = ImageProcessingModel(args.image)
     generate_hdl_params(args.file, model.height, model.width)
 
+  elif args.cmd == "download-image":
+    download_random_image()
+
   elif args.cmd == "compare":
     model = ImageProcessingModel(args.image)
     kernel = get_kernel(args.kernel)
@@ -59,7 +74,6 @@ def main():
 
     fpga = txt_to_image(args.fpga_txt, model.height, model.width)
     ref = valid_region(ref_full)
-    #fpga = valid_region(fpga_full)
     model.show(model.image, "Original")
     model.show(ref, "Reference - (python filterted)")
     model.show(fpga, "FPGA output")
