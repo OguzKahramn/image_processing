@@ -3,6 +3,20 @@
 //`include "img_processing_pkg.sv"
 import img_processing_pkg::*;
 
+
+`ifndef PIXELS_FILE
+  `define PIXELS_FILE "pixels_in.txt"
+`endif
+
+`ifndef PIXELS_OUT_FILE
+  `define PIXELS_OUT_FILE "pixel_out_fpga.txt"
+`endif
+
+`ifndef KERNEL_TYPE
+  `define KERNEL_TYPE KERNEL_SOBEL
+`endif
+
+
 module tb_img_processor();
 
   //! Data width of AXI-Stream interface
@@ -62,7 +76,7 @@ module tb_img_processor();
 
 
   initial begin
-    data_file = $fopen("pixels_in.txt","r");
+    data_file = $fopen(`PIXELS_FILE,"r");
     if(data_file == `NULL)begin
       $display("data_file handle was null");
       $finish;
@@ -71,86 +85,88 @@ module tb_img_processor();
 
   integer val;
   int i;
-initial begin
-  // @(posedge resetn);
-  // $readmemd("pixels_in.txt", pixels);
 
+  initial begin
     i = 0;
     while (!$feof(data_file)) begin
-     $fscanf(data_file, "%d", val);   // decimal
+     $fscanf(data_file, "%d", val);
     pixels[i] = val[7:0];
     i++;
-  end
-
-  $fclose(data_file);
-end
-
-initial begin
-  wr_data_file = $fopen("pixel_out_fpga.txt","w");
-  if(wr_data_file == `NULL)begin
-    $display("pixel_out_fpga handle was null");
-    $finish;
-  end
-end
-
-always_ff @(posedge clk) begin : read_text_file
-  if(!resetn)begin
-    s_axis.tlast <= 'd0;
-    s_axis.tvalid <= 'd0;
-    s_axis.tdata <= 'd0;
-    s_axis.tuser <= 'd1;
-    counter <= 'd0;
-    pixel_counter <= 'd1;
-    width_counter <= 'd1;
-  end
-  else begin
-    if(counter < 'd4)begin
-      counter <= counter + 'd1;
-      kernel_type <= KERNEL_SOBEL;
     end
-    else if(counter == 'd4)begin
-      counter <= counter + 'd1;
-      s_axis.tdata <= pixels[0];
-      s_axis.tuser <= 1'b1;
-      s_axis.tvalid <= 1'b1;
+    $fclose(data_file);
+  end
+
+  initial begin
+    wr_data_file = $fopen(`PIXELS_OUT_FILE,"w");
+    if(wr_data_file == `NULL)begin
+      $display("pixel_out_fpga handle was null");
+      $finish;
     end
-    else if(s_axis.tready && s_axis.tvalid && pixel_counter < MEM_SIZE-1)begin
-      s_axis.tdata <= pixels[pixel_counter];
-      pixel_counter <= pixel_counter + 'd1;
-      s_axis.tuser <= 1'b0;
-      width_counter <= width_counter + 'd1;
-      if(width_counter == IMG_W-1)begin
-        s_axis.tlast <= 'd1;
-        width_counter <= 'd0;
+  end
+
+  always_ff @(posedge clk) begin : read_text_file
+    if(!resetn)begin
+      s_axis.tlast <= 'd0;
+      s_axis.tvalid <= 'd0;
+      s_axis.tdata <= 'd0;
+      s_axis.tuser <= 'd1;
+      counter <= 'd0;
+      pixel_counter <= 'd1;
+      width_counter <= 'd0;
+    end
+    else begin
+      if(counter < 'd4)begin
+        counter <= counter + 'd1;
+        kernel_type <= `KERNEL_TYPE;
       end
-      else begin
-        s_axis.tlast <= 'd0;
+      else if(counter == 'd4)begin
+        counter <= counter + 'd1;
+        s_axis.tdata <= pixels[0];
+        s_axis.tuser <= 1'b1;
+        s_axis.tvalid <= 1'b1;
+      end
+      else if(s_axis.tready && s_axis.tvalid && pixel_counter < MEM_SIZE)begin
+        s_axis.tdata <= pixels[pixel_counter];
+        pixel_counter <= pixel_counter + 'd1;
+        s_axis.tuser <= 1'b0;
+        width_counter <= width_counter + 'd1;
+        if(width_counter == IMG_W-2)begin
+          s_axis.tlast <= 'd1;
+        end
+        else if(width_counter == IMG_W-1)begin
+          s_axis.tlast <= 'd0;
+          width_counter <= 'd0;
+        end
+        else begin
+          s_axis.tlast <= 'd0;
+        end
       end
     end
   end
-end
 
 
-always_ff @(posedge clk ) begin : write_calc_power
-  if(!resetn) begin
-    line_counter <= 'd0;
+  always_ff @(posedge clk ) begin : write_calc_power
+    if(!resetn) begin
+      line_counter <= 'd0;
+    end
+    else begin
+      if(m_axis.tready & m_axis.tvalid & m_axis.tlast & line_counter==IMG_H-3)begin
+        $fwrite(wr_data_file,"%d\n",m_axis.tdata);
+        $fclose(wr_data_file);
+        $finish;
+      end
+      else if(m_axis.tready & m_axis.tvalid & m_axis.tlast)begin
+        line_counter <= line_counter +'d1;
+        $fwrite(wr_data_file,"%d\n",m_axis.tdata);
+      end
+      else if(m_axis.tready & m_axis.tvalid)begin
+        $fwrite(wr_data_file,"%d\n",m_axis.tdata);
+      end
+    end
   end
-  else begin
-    if(m_axis.tready & m_axis.tvalid & m_axis.tlast & line_counter==IMG_H-3)begin
-      $fwrite(wr_data_file,"%d\n",m_axis.tdata);
-      $fclose(wr_data_file);
-    end
-    else if(m_axis.tready & m_axis.tvalid & m_axis.tlast)begin
-      line_counter <= line_counter +'d1;
-      $fwrite(wr_data_file,"%d\n",m_axis.tdata);
-    end
-    else if(m_axis.tready & m_axis.tvalid)begin
-      $fwrite(wr_data_file,"%d\n",m_axis.tdata);
-    end
+
+  initial begin
+    $dumpfile("output.vcd");
+    $dumpvars();
   end
-end
-
-
-
-
 endmodule

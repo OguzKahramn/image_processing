@@ -1,4 +1,4 @@
-`include "img_processing_pkg.sv"
+//`include "img_processing_pkg.sv"
 import img_processing_pkg::*;
 
 `default_nettype none;
@@ -154,7 +154,7 @@ always_ff @(posedge clk)begin
         pixel_out <= conv_sum >> 4;
       end
       KERNEL_SOBEL:begin
-        pixel_out = (conv_sum < 0) ? 0 : (conv_sum > 255) ? 255 : conv_sum;
+        pixel_out <= (conv_sum < 0) ? 0 : (conv_sum > 255) ? 255 : conv_sum;
       end
       default: pixel_out <= conv_sum[7:0];
     endcase
@@ -178,7 +178,7 @@ always_ff @(posedge clk)begin
   if(!reset_n)begin
     m_line_cntr <= 'd0;
   end
-  else if(m_axis.tready & m_axis.tvalid & m_axis.tlast & m_line_cntr == IMG_H-3)begin
+  else if(m_axis.tready & m_axis.tvalid & m_axis.tlast & m_line_cntr == IMG_H-2)begin
     m_line_cntr <= 'd0;
   end
   else if(m_axis.tready & m_axis.tvalid & m_axis.tlast)begin

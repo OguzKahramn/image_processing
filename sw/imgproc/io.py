@@ -9,14 +9,13 @@ def txt_to_image(path: str, height: int, width:int):
   with open(path, "r") as f:
     data = [int(line.strip()) for line in f if line.strip()]
 
-  img = np.zeros((height, width),dtype=np.int32)
+  img = np.zeros((height-2, width-3),dtype=np.int32)
   idx = 0
-  for i in range(1, height-2):
-      for j in range(1, width-2):
+  for i in range(0, height-2):
+      for j in range(0, width-3):
           if idx >= len(data):
               print("Ran out of FPGA data at idx =", idx)
               return
           img[i,j] = min(max(data[idx], 0), 255)
           idx += 1
-
   return img

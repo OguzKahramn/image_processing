@@ -2,7 +2,7 @@ import argparse
 from imgproc.kernels import get_kernel
 from imgproc.image_processing_model import ImageProcessingModel
 from imgproc.io import image_to_txt, txt_to_image
-from imgproc.processing_helper import apply_filter, diff
+from imgproc.processing_helper import apply_filter, diff, valid_region
 from imgproc.generate_hdl_params import generate_hdl_params
 
 def main():
@@ -55,13 +55,16 @@ def main():
   elif args.cmd == "compare":
     model = ImageProcessingModel(args.image)
     kernel = get_kernel(args.kernel)
-    ref = apply_filter(model.image,kernel)
+    ref_full = apply_filter(model.image,kernel)
 
     fpga = txt_to_image(args.fpga_txt, model.height, model.width)
+    ref = valid_region(ref_full)
+    #fpga = valid_region(fpga_full)
     model.show(model.image, "Original")
     model.show(ref, "Reference - (python filterted)")
     model.show(fpga, "FPGA output")
     d = diff(ref, fpga)
+    image_to_txt(ref, args.out_txt)
     model.show(d, "Difference")
 
 if __name__ == "__main__":
