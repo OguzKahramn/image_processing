@@ -36,4 +36,4 @@ class ImageProcessingModel:
   def show(self, img, title="Image"):
     img8 = np.clip(img,0,255).astype(np.uint8)
     cv2.imshow(title, img8)
-    cv2.waitKey(0)
+    cv2.waitKey(10000)
