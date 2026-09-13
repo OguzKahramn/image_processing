@@ -21,7 +21,7 @@ from datetime import datetime
 def generate_hdl_params(fileName: str,
                         img_height: int,
                         img_width: int,
-                        axis_tdata_width: int = 8,
+                        axis_tdata_width: int = 24,
                         axis_tuser_width: int = 1):
 
   output_file = Path(fileName)
